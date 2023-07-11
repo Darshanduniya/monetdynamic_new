@@ -1,7 +1,10 @@
 import datetime
-from airflow import DAG
 
-dag = DAG(dag_id="hello_world", schedule_interval="@weekly")
+from airflow import DAG
+from airflow.operators.python_operator import PythonOperator
+
+dag_id = "hello_world"
+dag_schedule_interval = "@weekly"
 
 def hello_world():
     print("Hello, world!")
@@ -18,9 +21,16 @@ def check_if_dag_triggered_this_week():
 
     return triggered_this_week
 
-def main():
-    if not check_if_dag_triggered_this_week():
-        hello_world()
+dag = DAG(dag_id=dag_id, schedule_interval=dag_schedule_interval)
 
-if __name__ == "__main__":
-    main()
+task_hello_world = PythonOperator(
+    task_id="hello_world", python_callable=hello_world, dag=dag
+)
+
+task_check_if_triggered = PythonOperator(
+    task_id="check_if_triggered", python_callable=check_if_dag_triggered_this_week, dag=dag
+)
+
+task_hello_world.set_upstream(task_check_if_triggered)
+
+
