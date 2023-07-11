@@ -1,0 +1,39 @@
+from airflow import DAG
+from airflow.operators.python import PythonOperator
+from airflow.utils.dates import datetime, timedelta
+from airflow.models import DagRun
+
+def check_dag_triggered(**kwargs):
+    # Get the current week's start and end dates
+    current_date = datetime.now().date()
+    start_date = current_date - timedelta(days=current_date.weekday())
+    end_date = start_date + timedelta(days=6)
+
+    # Check if the DAG has already been triggered in the current week
+    dag_id = kwargs['dag'].dag_id
+    dag_runs = DagRun.find(dag_id=dag_id, execution_start_date=start_date, execution_end_date=end_date, state='running')
+
+    if dag_runs:
+        print(f"DAG {dag_id} has already been triggered this week.")
+    else:
+        print(f"DAG {dag_id} has not been triggered this week. Triggering it now.")
+        return 'trigger_next_dag'  # Return a value to trigger the next task
+
+with DAG(
+    dag_id='hello_world_dag',
+    start_date=datetime(2023, 7, 11),
+    schedule_interval=timedelta(days=1),
+    catchup=False
+) as dag:
+    check_trigger = PythonOperator(
+        task_id='check_trigger',
+        python_callable=check_dag_triggered,
+        provide_context=True
+    )
+
+    hello_task = PythonOperator(
+        task_id='hello_task',
+        python_callable=lambda: print("Hello, World!"),
+    )
+
+    check_trigger >> hello_task
