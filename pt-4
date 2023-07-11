@@ -1,0 +1,35 @@
+def check_dag_triggered(industry_name, job_type, cursor):
+    if job_type == 'weekly':
+        query = f'''SELECT COUNT(*) FROM "execution_log" WHERE operation_type='ab' AND job_status='SUCCESS' AND YEARWEEK(sys.str_to_date("execution_end_time",'%y-%m-%d')) = YEARWEEK(CURRENT_DATE) AND industry_name='{industry_name}' AND dag_flag=1'''
+    elif job_type == 'monthly':
+        query = f'''SELECT COUNT(*) FROM "execution_log" WHERE operation_type='ab' AND job_status='SUCCESS' AND MONTH(sys.str_to_date("execution_end_time",'%y-%m-%d')) = MONTH(CURRENT_DATE) AND industry_name='{industry_name}' AND dag_flag=1'''
+    else:
+        return False
+
+    cursor.execute(query)
+    results = cursor.fetchone()[0]
+    return results > 0
+
+# ...
+
+def execute_monet_query(industry_name, industry, monetdb_credentials):
+    # ...
+
+    if results > 0 and result_two == 'B' and not check_dag_triggered(industry_name, job_type, cursor):
+        if job_type == 'weekly':
+            dag_id = f'{industry_name}_B'
+            subprocess.run(['airflow', 'dags', 'trigger', dag_id])
+
+            update_query = f'''UPDATE "execution_log" SET dag_flag=1 WHERE operation_type='ab' and job_status='SUCCESS' and sys.str_to_date("execution_end_time",'%y-%m-%d')=current_date AND industry_name='{industry_name}' AND dag_flag=0 '''
+            cursor.execute(update_query)
+            conn.commit()
+
+        elif job_type == 'monthly':
+            dag_id = f'{industry_name}_B'
+            subprocess.run(['airflow', 'dags', 'trigger', dag_id])
+
+            update_query = f'''UPDATE "execution_log" SET dag_flag=1 WHERE operation_type='ab' and job_status='SUCCESS' and sys.str_to_date("execution_end_time",'%y-%m-%d')=current_date AND industry_name='{industry_name}' AND dag_flag=0 '''
+            cursor.execute(update_query)
+            conn.commit()
+
+    # ...
