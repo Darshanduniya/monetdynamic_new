@@ -1,0 +1,26 @@
+import datetime
+from airflow import DAG
+
+dag = DAG(dag_id="hello_world", schedule_interval="@weekly")
+
+def hello_world():
+    print("Hello, world!")
+
+def check_if_dag_triggered_this_week():
+    current_week_start = datetime.datetime.today().isocalendar()[1]
+    current_week_end = current_week_start + 6
+
+    triggered_this_week = False
+    for day in range(current_week_start, current_week_end + 1):
+        if datetime.datetime.today().weekday() == day:
+            triggered_this_week = True
+            break
+
+    return triggered_this_week
+
+def main():
+    if not check_if_dag_triggered_this_week():
+        hello_world()
+
+if __name__ == "__main__":
+    main()
